@@ -21,7 +21,7 @@ function getInitialState(){
     let stored = checkPomodoroLocalStorage()
     stored = clearHist(stored)
     let missed = checkTicksMissed(stored)
-    console.log( ' init  ', stored)
+    // console.log( ' init  ', stored)
     return { ...initial, ...stored, ticksMissed: missed  }
 }
 

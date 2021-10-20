@@ -13,6 +13,7 @@ import { actions } from './redux';
 
 import { usePomodoroLocalStorage } from './pomodoro';
 
+const baseURL= '/react/pomodoro'
 
 
 function Top (){
@@ -177,7 +178,7 @@ function PomoCounter(){
 function SettingsLink(){
 
   return(
-    <Link to="/settings" >
+    <Link to={baseURL+"/settings"} >
       <div className=" underline font-bold relative inline-block left-4 top-4" >
         SETTINGS
       </div>
@@ -253,7 +254,7 @@ function Settings(){
           </div>
 
       </div>
-      <Link to="/">
+      <Link to={baseURL}>
         <div className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center font-extrabold" >
             X
         </div>
@@ -351,11 +352,11 @@ function App() {
 
             <Switch>
               
-              <Route exact path="/">
+              <Route exact path={baseURL}>
                 <Pomodoro />
               </Route>
 
-              <Route path="/settings">
+              <Route path={baseURL+'/settings'}>
                 <Settings />
               </Route>
 
