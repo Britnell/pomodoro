@@ -8,7 +8,9 @@ const initial = {
     paused: false,
     overtime: false,
     settings: {
-        work: 35,    short: 5,   long: 15,  set: 4,
+        work: 35,    short: 5,   
+        long: 15,  set: 4,
+        notificationsEnabled: true,
     },
     timer: {
         begin: 0, period: 0, min:0, sec: 0,

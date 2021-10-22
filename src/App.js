@@ -1,19 +1,20 @@
 import React from 'react';
-import './App.css';
 
 import {
   BrowserRouter as Router,
-  Switch,
-  Route,
-  Link
+  Switch, Route, Link,
+  useHistory,
 } from "react-router-dom";
 
 import { useSelector, useDispatch } from 'react-redux'
-import { actions } from './redux';
+import { actions, pomodoro } from './redux';
 
-import { usePomodoroLocalStorage } from './pomodoro';
+import { usePomodoroLocalStorage, useNotifications } from './pomodoro';
+
+// * Constants
 
 const baseURL= '/react/pomodoro'
+
 
 
 function Top (){
@@ -85,7 +86,7 @@ function TomatoBox({children}){
   return (
     <div 
       onClick={click} 
-      className={"w-60 h-60 border-8 rounded-full p-4 flex flex-col items-center justify-center relative m-auto duration-700 " +color}
+      className={"w-60 h-60 border-8 rounded-full p-4 mt-8 flex flex-col items-center justify-center relative duration-700 " +color}
     >
       {children}
     </div>)
@@ -97,7 +98,6 @@ function Tomato(){
 
   const paused = <label className=" text-lg italic font-semibold absolute bottom-12 ">PAUSED</label>
 
-  console.log(pomodoro)
 
   switch(pomodoro.status){
     case 'ready':
@@ -134,7 +134,7 @@ function Tomato(){
 }
 
 
-function Bottom(){
+function Cancel(){
   const status = useSelector(state=>state.pomodoro.status)
   const paused = useSelector(state=>state.pomodoro.paused)
   const dispatch = useDispatch()
@@ -144,21 +144,13 @@ function Bottom(){
     col = ' bg-green hover:bg-green-dark'
 
   const cancel = <button 
-    className={" m-auto block font-semibold bg-red-300 rounded-lg px-4 py-2 mt-6 "+col}
+    className={" m-auto block font-semibold bg-red-300 rounded-lg px-4 py-2 "+col}
     onClick={()=>dispatch(actions.cancel())}>CANCEL</button>
   
-  switch(status){
-    case 'work':
-      return (<div>
-        {paused && cancel}
-      </div>)
-    case 'short':
-      return (<div>
-        {paused && cancel}
-      </div>)
-    default:
-      return <div></div>
-  }
+  const showCancel = ['work','short','long'].includes(status)
+  
+  return <div className="absolute bottom-14 w-full"
+      >{showCancel && paused && cancel}</div>
 }
 
 function PomoCounter(){
@@ -178,17 +170,18 @@ function PomoCounter(){
 function SettingsLink(){
 
   return(
-    <Link to={baseURL+"/settings"} >
-      <div className=" underline font-bold relative inline-block left-4 top-4" >
-        SETTINGS
-      </div>
-    </Link> 
+    <div className=" absolute bottom-4 w-full" >
+      <Link className=" underline font-bold px-4 py-3 bg-gray-500 bg-opacity-20 rounded-lg ml-6" to={baseURL+"/settings"} >
+          SETTINGS
+      </Link> 
+    </div>
   )
 }
 
 function Settings(){
   const settings = useSelector(state=>state.pomodoro.settings)
   const dispatch = useDispatch()
+  const history = useHistory()
 
   // console.log(settings)
 
@@ -200,15 +193,34 @@ function Settings(){
     dispatch(actions.changeSettings(sett))
   }
 
+  
+  const permission = ()=>{
+    // * DIsable
+    if(settings.notificationsEnabled)
+      return dispatch(actions.changeSettings({ notificationsEnabled: false }))
+    
+    // * Enable
+    if(!('Notification' in window)) return;
+    Notification.requestPermission((res)=>{
+      if (res === 'granted') 
+        return dispatch(actions.changeSettings({ notificationsEnabled: true }))
+    });
+  }
+
+  const back = ()=>{
+    history.goBack()
+  }
+        
+
   return (
-    <div className=" bg-gray-100 rounded-lg relative overflow-hidden">
+    <div className=" bg-gray-100 rounded-lg relative overflow-hidden mx-4 ">
       <div className=" text-2xl font-extrabold text-center bg-gray-400 py-6 " >SETTINGS</div>
-      <div className=" grid grid-cols-2 px-6 py-6 "  >
+      <div className=" grid grid-cols-2 px-6 py-6 grid-rows-5 "  >
         <div className=" col-span-2 text-lg font-bold py-2 underline ">INTERVALS</div>
           
           <div>WORK</div>
           <div>
-            <select className="  w-3/4" value={settings.work} 
+            <select className="  w-3/4 p-1" value={settings.work} 
               onChange={(ev)=>change({work:ev.target.value})}>
               <option value="20">20 min</option>
               <option value="25">25 min</option>
@@ -220,7 +232,7 @@ function Settings(){
 
           <div>SHORT BREAK</div>
           <div>
-            <select className="  w-3/4" value={settings.short} 
+            <select className="  w-3/4 p-1" value={settings.short} 
               onChange={(ev)=>change({short:ev.target.value})}>
               <option value="3">3 min</option>
               <option value="5">5 min</option>
@@ -231,7 +243,7 @@ function Settings(){
 
           <div>LONG BREAK</div>
           <div>
-            <select className="  w-3/4" value={settings.long} 
+            <select className="  w-3/4 p-1" value={settings.long} 
               onChange={(ev)=>change({long:ev.target.value})}>
               <option value="15">15 min</option>
               <option value="20">20 min</option>
@@ -241,10 +253,9 @@ function Settings(){
             </select>
           </div>
 
-          <div className=" col-span-2">LONG BREAK EVERY _ BREAKS </div>
-          <div></div>
+          <div className="xcol-span-2">LONG BREAK EVERY  </div>
           <div>
-            <select className="  w-3/4" value={settings.set} 
+            <select className="  w-3/4 p-1" value={settings.set} 
               onChange={(ev)=>change({set:ev.target.value})}>
               <option value="2">2</option>
               <option value="3">3</option>
@@ -253,12 +264,19 @@ function Settings(){
             </select>
           </div>
 
+          <div>
+            TIMER NOTIFICATIONS 
+          </div>
+          <button className="bg-gray-200 w-3/4 rounded-sm " 
+            onClick={permission} >{settings.notificationsEnabled?'DISABLE':'ENABLE'}</button>
+          
+
       </div>
-      <Link to={baseURL}>
-        <div className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center font-extrabold" >
+      {/* <Link to={baseURL}> */}
+        <div onClick={back} className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center font-extrabold" >
             X
         </div>
-      </Link>
+      {/* </Link> */}
     </div>
   )
 }
@@ -269,23 +287,27 @@ function Pomodoro(){
   const pomodoro = useSelector(state=>state.pomodoro)
   const {status} = pomodoro
   
-  // console.log('<Pmodoro : ', pomodoro   )    
 
-  
+  useNotifications(pomodoro)
+
+
+  const skip = ()=> dispatch(actions.skip())
+
   return (
     <>
-      <div className="flex flex-col relative ">
+      <div className="flex flex-col relative h-full tomato-h-max  items-center ">
 
         <Top />
 
         <Tomato />
         
-        <Bottom /> 
+        <Cancel /> 
 
         <PomoCounter />
         <SettingsLink />
 
-        {/* <button className="p-2 m-2 border-2" onClick={dispatch(actions.skip())}>skip</button> */}
+        
+        {/* <button className="" onClick={()=>dispatch(actions.skip())}>skip</button> */}
         
       </div>
     </>
@@ -296,10 +318,9 @@ function Pomodoro(){
 function Header(){
   const pomodoro = useSelector(state=>state.pomodoro)
   var background = 'bg-tomato'
-  if(pomodoro.status==='short')
-    background = 'bg-green'
+  if(['short','long'].includes(pomodoro.status))  background = 'bg-green'
   return (<header 
-    className={" duration-700 text-4xl font-heading text-center green py-8 "+background} >
+    className={" duration-700 text-3xl sm:text-4xl font-heading text-center green py-8 "+background} >
     POMODORO TIMER</header>
   )
 }
@@ -348,8 +369,8 @@ function App() {
 
         <Header />
         <main className="flex-1">
-          <div className=" max-w-md m-auto my-8 font-sans ">
-
+          <div className=" max-w-md m-auto py-8 font-sans h-full ">
+            
             <Switch>
               
               <Route exact path={baseURL}>
